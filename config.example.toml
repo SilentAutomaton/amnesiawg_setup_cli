@@ -22,12 +22,13 @@ install_docker = true
 listen_port = 51820
 subnet = "10.8.1.0/24"
 
-# Address clients connect to. Empty means use server.prod.host.
+# Address clients connect to, as "host:port". Empty means "<host>:<listen_port>".
+# Set it when the public port differs from the port the container listens on.
 endpoint = ""
 
 dns = ["1.1.1.1", "1.0.0.1"]
 mtu = 1376
-persistent_keepalive = 25
+persistent_keepalive = "25-35"
 
 image = "amneziavpn/amneziawg-go:latest"
 container_name = "awgctl-prod"
