@@ -132,6 +132,10 @@ in the config exists so an awkward kernel can be handled without touching code.
 `docker run --rm <image> sh -c 'awg genkey'` and friends. The tool therefore needs no local crypto
 library at all — Python's standard library has no X25519.
 
+Verified locally against the real image: the container starts with this narrow capability set, the
+userspace driver comes up, `awg` accepts every 3.1 parameter we write, the MASQUERADE rule lands,
+and `awg syncconf` applies a new peer to the live interface.
+
 ### The server is the only source of truth
 
 There is no local state file. `awg0.conf` on the server holds the interface settings, the
@@ -149,7 +153,14 @@ both the runtime config and the client registry. This is simpler than Amnezia's 
 `clientsTable` and cannot drift out of sync with it.
 
 Client configs are rendered from the parameters read back off the server, so a client always matches
-the server it was issued from.
+the server it was issued from. There is one renderer for both sides: `render_conf` writes the server
+config, the client config and every rewrite, so there is no template that can drift from the parser.
+
+Each peer gets its own preshared key. Amnezia shares one key across every client; per-peer keys cost
+nothing here because the key is generated together with the peer's keypair in the same round trip.
+
+`I1`..`I5` (the AmneziaWG "special junk" packets) are not written. They are optional, and the
+upstream client only stores them as comments in the server config anyway.
 
 ### Module map
 
@@ -163,6 +174,11 @@ the server it was issued from.
 | `awgctl/clients.py` | `add-client`, `list-clients`, `remove-client` |
 | `awgctl/qr.py` | terminal QR, optional `segno` dependency |
 | `awgctl/cli.py` | argparse and dispatch, no logic |
+| `awgctl/assets/entrypoint.sh` | the only asset; everything else is rendered |
+
+There is no `--dry-run`. A dry run cannot produce a config, because the keys come from the server, so
+it would have to lie about what it did. `-v/--verbose` echoes every remote command instead, which
+gives the same review value truthfully.
 
 Pure logic sits in `awg.py`; the other modules stay thin and side-effecting. No class hierarchy, no
 plugin registry, no interface with a single implementation.

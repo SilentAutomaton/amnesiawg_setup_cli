@@ -37,7 +37,10 @@ awgctl destroy --purge           # remove the container and the remote directory
 ```
 
 Every command takes `--server NAME` to pick a server from the config, `--config PATH` to point at a
-different config file, and `--dry-run` to print the remote commands instead of running them.
+different config file, and `-v` to echo every remote command as it runs.
+
+`add-client` and `remove-client` apply the change to the running interface with `awg syncconf`, so
+other clients keep their sessions.
 
 ## Requirements on the VPS
 
@@ -47,3 +50,9 @@ different config file, and `--dry-run` to print the remote commands instead of r
   (`privilege = "none"`), or able to run `sudo` (`privilege = "auto"` will ask for the password when
   it is needed).
 - The UDP port from `listen_port` must be open in the provider firewall.
+
+## Test
+
+```sh
+python tests/test_awg.py
+```
