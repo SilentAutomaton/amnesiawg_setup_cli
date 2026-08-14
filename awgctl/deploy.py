@@ -11,7 +11,6 @@ from .ssh import RemoteError, Ssh
 
 def deploy(ssh: Ssh, server: Server, force: bool = False) -> None:
     settings = server.awg
-    ssh.connect()
     print(f"server: {ssh.run('uname -sr').strip()}")
 
     existing = remote.container_state(ssh, settings.container_name)

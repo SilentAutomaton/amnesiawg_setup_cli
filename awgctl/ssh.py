@@ -96,6 +96,8 @@ class Ssh:
             f"ControlPath={socket}",
             "-o",
             "ControlPersist=60s",
+            "-o",
+            "ConnectTimeout=10",
             "-p",
             str(self.server.port),
         ]
