@@ -1,0 +1,38 @@
+# Copy to config.toml and edit. config.toml is git-ignored.
+
+default_server = "prod"
+
+[server.prod]
+host = "203.0.113.10"
+port = 22
+user = "deploy"
+identity_file = "~/.ssh/id_ed25519"
+
+# auto | none | sudo | root
+#   auto  probe the server: plain docker, then "sudo -n", then ask for a sudo password
+#   none  the user is in the docker group, sudo is never called
+#   sudo  always call sudo, ask for a password if "sudo -n" fails
+#   root  the user is root, sudo is never called
+privilege = "auto"
+
+# Install Docker with the distribution package manager when it is missing.
+install_docker = true
+
+[server.prod.awg]
+listen_port = 51820
+subnet = "10.8.1.0/24"
+
+# Address clients connect to. Empty means use server.prod.host.
+endpoint = ""
+
+dns = ["1.1.1.1", "1.0.0.1"]
+mtu = 1376
+persistent_keepalive = 25
+
+image = "amneziavpn/amneziawg-go:latest"
+container_name = "awgctl-prod"
+remote_dir = "/opt/awgctl/prod"
+
+# Extra arguments for "docker run". Add "--privileged" if the narrow capability
+# set does not work on your kernel.
+docker_run_extra = []

@@ -1,0 +1,22 @@
+[project]
+name = "awgctl"
+version = "0.1.0"
+description = "Deploy AmneziaWG in Docker on a remote VPS over SSH and issue client configs"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+qr = ["segno>=1.6"]
+
+[project.scripts]
+awgctl = "awgctl.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["awgctl"]
+
+[tool.setuptools.package-data]
+awgctl = ["assets/*"]
