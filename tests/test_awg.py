@@ -4,7 +4,22 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from awgctl import awg
+from awgctl import awg, clients
+
+SHOW_OUTPUT = """
+interface: awg0
+  public key: SERVERPUB
+  listening port: 51820
+
+peer: LAPTOPPUB
+  endpoint: 198.51.100.7:44321
+  allowed ips: 10.8.1.2/32
+  latest handshake: 1 minute, 12 seconds ago
+  transfer: 1.20 MiB received, 3.40 MiB sent
+
+peer: PHONEPUB
+  allowed ips: 10.8.1.5/32
+"""
 
 SAMPLE = """
 [Interface]
@@ -114,6 +129,25 @@ def test_client_conf_copies_shared_params():
     for key in awg.SHARED_PARAM_KEYS:
         assert client.interface[key] == server.interface[key]
     assert client.peers[0].fields["Endpoint"] == "vpn.example.org:51820"
+
+
+def test_peer_name_is_checked():
+    for good in ("laptop", "phone-2", "a.b_c", "A1"):
+        assert awg.check_peer_name(good) == good
+    for bad in ("", "-lead", "with space", "new\nline", "../escape", "x" * 65):
+        try:
+            awg.check_peer_name(bad)
+        except ValueError:
+            continue
+        raise AssertionError(f"expected {bad!r} to be rejected")
+
+
+def test_peer_stats_parsing():
+    stats = clients._peer_stats(SHOW_OUTPUT)
+    assert stats["LAPTOPPUB"]["latest handshake"] == "1 minute, 12 seconds ago"
+    assert stats["LAPTOPPUB"]["transfer"] == "1.20 MiB received, 3.40 MiB sent"
+    assert stats["PHONEPUB"] == {}
+    assert clients._peer_stats("") == {}
 
 
 if __name__ == "__main__":

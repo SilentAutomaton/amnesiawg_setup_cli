@@ -43,6 +43,16 @@ SHARED_PARAM_KEYS = (
 )
 
 
+PEER_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+
+
+def check_peer_name(name: str) -> str:
+    """A peer name becomes both a config comment and a local file name."""
+    if not PEER_NAME_RE.match(name):
+        raise ValueError(f"invalid client name {name!r}: use letters, digits, dot, dash or underscore")
+    return name
+
+
 @dataclass
 class Peer:
     name: str = ""
