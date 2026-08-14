@@ -48,9 +48,12 @@ def pull_image(ssh: Ssh, image: str) -> None:
 
 
 def create_remote_dir(ssh: Ssh, path: str) -> None:
-    # Owned by the login user so later config writes need no privileges at all.
-    owner = ssh.run("id -un").strip()
     quoted = shlex.quote(path)
+    if ssh.ok(f"mkdir -p {quoted} && chmod 700 {quoted}"):
+        return
+    # A privileged location needs sudo, then hand it to the login user so that later
+    # config writes need no privileges at all.
+    owner = ssh.run("id -un").strip()
     ssh.sudo(f"mkdir -p {quoted} && chown {shlex.quote(owner)} {quoted} && chmod 700 {quoted}")
 
 
