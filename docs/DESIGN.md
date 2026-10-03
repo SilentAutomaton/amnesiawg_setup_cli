@@ -84,9 +84,10 @@ These values are the same on every Amnezia server, which makes them a fingerprin
   Each range is at most 20000 wide: with `RandomTrailers = on`, amneziawg-go drops a transport
   packet whose header falls into H1..H3 (amneziawg-go issue #186), and wide ranges caused about
   12 % loss.
-- `I1` imitates one of: a DNS query for a popular domain, a QUIC v1 Initial packet (1200 bytes), or
-  a SIP REGISTER. The fixed parts are `<b 0x..>` tags, the variable parts are `<r>`, `<rc>`, `<rd>`
-  tags, so every handshake sends a different packet.
+- `I1` imitates a DNS query for a popular domain: random 2 byte ID, fixed flags and question. Do
+  not use a QUIC Initial with random payload: TSPU decrypts QUIC Initial packets, and an Initial
+  it cannot read gets the whole UDP flow blocked, so the handshake passes and data stops. Random
+  bytes get cut on some mobile networks; a packet shaped like a real protocol passes.
 
 `awgctl rotate` writes a new set into the server config and restarts the container. Client configs
 carry the same parameters, so every client must be issued again afterwards.

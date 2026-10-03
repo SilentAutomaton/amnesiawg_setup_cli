@@ -24,7 +24,8 @@ MAGIC_HEADER_MAX = 2**31 - 1
 # ranges (amneziawg-go issue #186), so loss grows with range width. 20000 keeps it near 0.001 %.
 MAGIC_HEADER_WIDTH = 20_000
 
-# I1 is sent before every handshake. It imitates a packet of a common UDP protocol.
+# I1 is sent before every handshake and imitates a DNS query. TSPU drops the whole UDP flow after a
+# QUIC Initial it cannot decrypt, and random bytes get cut on some mobile networks.
 DECOY_DOMAINS = ("yandex.ru", "vk.com", "mail.ru", "ozon.ru", "gosuslugi.ru", "wildberries.ru")
 
 # Interface parameters that both sides of the tunnel must agree on. Client configs
@@ -104,7 +105,7 @@ def generate_obfuscation(header_protection_key: str, rng: random.Random | None =
         "Jmax": str(junk_min + rng.randint(20, 80)),
         **{key: str(value) for key, value in sizes.items()},
         **_magic_headers(rng),
-        "I1": rng.choice(SIGNATURE_PACKETS)(rng),
+        "I1": _dns_query(rng),
         "I2": "",
         "I3": "",
         "I4": "",
@@ -148,34 +149,6 @@ def _dns_name(domain: str) -> bytes:
 def _dns_query(rng: random.Random) -> str:
     question = _dns_name(rng.choice(DECOY_DOMAINS)) + bytes.fromhex("00010001")
     return "<r 2>" + _hex(bytes.fromhex("01000001000000000000") + question)
-
-
-def _quic_initial(rng: random.Random) -> str:
-    # Long header, version 1, 8 byte DCID, no SCID, no token, then 1182 bytes of
-    # packet number and payload, so the datagram is the 1200 bytes QUIC requires.
-    return _hex(bytes.fromhex("c30000000108")) + "<r 8>" + _hex(bytes.fromhex("0000449e")) + "<r 1182>"
-
-
-def _sip_register(rng: random.Random) -> str:
-    domain = rng.choice(DECOY_DOMAINS)
-    return (
-        _hex(f"REGISTER sip:{domain} SIP/2.0\r\nVia: SIP/2.0/UDP 192.168.1.".encode())
-        + "<rd 2>"
-        + _hex(b":5060;branch=z9hG4bK")
-        + "<rc 16>"
-        + _hex(b"\r\nMax-Forwards: 70\r\nFrom: <sip:")
-        + "<rd 6>"
-        + _hex(f"@{domain}>;tag=".encode())
-        + "<rc 10>"
-        + _hex(b"\r\nTo: <sip:")
-        + "<rd 6>"
-        + _hex(f"@{domain}>\r\nCall-ID: ".encode())
-        + "<rc 24>"
-        + _hex(b"\r\nCSeq: 1 REGISTER\r\nExpires: 3600\r\nContent-Length: 0\r\n\r\n")
-    )
-
-
-SIGNATURE_PACKETS = (_dns_query, _quic_initial, _sip_register)
 
 
 _SECTION_RE = re.compile(r"^\[(\w+)\]$")

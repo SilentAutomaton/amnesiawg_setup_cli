@@ -80,12 +80,6 @@ def check_tag_chain(chain):
             assert name in ("r", "rc", "rd") and int(value) > 0
 
 
-def test_every_signature_packet_is_valid():
-    rng = random.Random(2)
-    for build in awg.SIGNATURE_PACKETS:
-        check_tag_chain(build(rng))
-
-
 def test_parse_and_render_round_trip():
     conf = awg.parse_conf(SAMPLE)
     assert conf.interface["Address"] == "10.8.1.1/24"
