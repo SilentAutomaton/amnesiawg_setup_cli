@@ -80,8 +80,10 @@ These values are the same on every Amnezia server, which makes them a fingerprin
   `S2 + MessageResponseSize`, `S3 + MessageCookieReplySize` and `S4 + MessageTransportHeaderSize`
   must all differ, and the four `S` values must be distinct. Otherwise two packet types end up the
   same size on the wire.
-- `H1..H4` are four ranges `lo-hi` in 5..2^31-1. amneziawg-go rejects overlapping ranges, so eight
-  sorted distinct bounds are paired up.
+- `H1..H4` are four ranges `lo-hi` in 5..2^31-1 that do not overlap (amneziawg-go rejects overlap).
+  Each range is at most 20000 wide: with `RandomTrailers = on`, amneziawg-go drops a transport
+  packet whose header falls into H1..H3 (amneziawg-go issue #186), and wide ranges caused about
+  12 % loss.
 - `I1` imitates one of: a DNS query for a popular domain, a QUIC v1 Initial packet (1200 bytes), or
   a SIP REGISTER. The fixed parts are `<b 0x..>` tags, the variable parts are `<r>`, `<rc>`, `<rd>`
   tags, so every handshake sends a different packet.

@@ -20,6 +20,9 @@ JUNK_SIZE_MAX = {"S1": 150, "S2": 150, "S3": 64, "S4": 32}
 # H1..H4 are ranges of message type values. They must not overlap, and 1..4 are plain WireGuard.
 MAGIC_HEADER_MIN = 5
 MAGIC_HEADER_MAX = 2**31 - 1
+# With RandomTrailers on, amneziawg-go drops a transport packet whose header falls into the H1..H3
+# ranges (amneziawg-go issue #186), so loss grows with range width. 20000 keeps it near 0.001 %.
+MAGIC_HEADER_WIDTH = 20_000
 
 # I1 is sent before every handshake. It imitates a packet of a common UDP protocol.
 DECOY_DOMAINS = ("yandex.ru", "vk.com", "mail.ru", "ozon.ru", "gosuslugi.ru", "wildberries.ru")
@@ -125,9 +128,11 @@ def _packet_types_stay_distinct(sizes: dict[str, int]) -> bool:
 
 
 def _magic_headers(rng: random.Random) -> dict[str, str]:
-    # Eight sorted distinct bounds paired up give four ranges that cannot overlap.
-    bounds = sorted(rng.sample(range(MAGIC_HEADER_MIN, MAGIC_HEADER_MAX + 1), 8))
-    ranges = [f"{bounds[i]}-{bounds[i + 1]}" for i in range(0, 8, 2)]
+    while True:
+        starts = sorted(rng.sample(range(MAGIC_HEADER_MIN, MAGIC_HEADER_MAX - MAGIC_HEADER_WIDTH), 4))
+        if all(nxt - start > MAGIC_HEADER_WIDTH for start, nxt in zip(starts, starts[1:])):
+            break
+    ranges = [f"{start}-{start + rng.randint(0, MAGIC_HEADER_WIDTH)}" for start in starts]
     rng.shuffle(ranges)
     return {f"H{i + 1}": value for i, value in enumerate(ranges)}
 

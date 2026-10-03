@@ -59,8 +59,10 @@ def test_obfuscation_is_valid():
 
         ranges = sorted(tuple(map(int, params[f"H{i}"].split("-"))) for i in range(1, 5))
         assert ranges[0][0] >= awg.MAGIC_HEADER_MIN and ranges[-1][1] <= awg.MAGIC_HEADER_MAX
+        for lo, hi in ranges:
+            assert 0 <= hi - lo <= awg.MAGIC_HEADER_WIDTH
         for (lo, hi), (next_lo, _) in zip(ranges, ranges[1:]):
-            assert lo < hi < next_lo
+            assert hi < next_lo
 
         check_tag_chain(params["I1"])
 
