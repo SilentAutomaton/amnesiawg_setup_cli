@@ -9,6 +9,9 @@ from dataclasses import dataclass, field
 
 INTERFACE_NAME = "awg0"
 
+# Outer packet = inner MTU + WireGuard header and tag + S4 + IPv4 and UDP headers. Keep it within 1500.
+TRANSPORT_OVERHEAD = 32 + 28
+
 # Size of each AmneziaWG packet type before its junk is added. Two types must never
 # reach the same total size, or the junk stops hiding which type a packet is.
 PACKET_BASE_SIZE = {"S1": 148, "S2": 92, "S3": 64, "S4": 32}
@@ -111,13 +114,15 @@ def generate_obfuscation(header_protection_key: str, rng: random.Random | None =
         "I4": "",
         "I5": "",
         "HeaderProtectionKey": header_protection_key,
-        "ContentPaddingAddition": "10-100",
+        # Off: both pad transport packets, and RandomTrailers loses packets (amneziawg-go issue #186).
+        # An empty value also removes them from an existing server config on rotate.
+        "ContentPaddingAddition": "",
         "RekeyAfterTime": "100-120",
         "RekeyTimeout": "3-7",
         "RejectAfterTime": "150-180",
         "KeepaliveTimeout": "5-15",
         "MaxHandshakeAttempts": "15-20",
-        "RandomTrailers": "on",
+        "RandomTrailers": "",
         "DisableCookies": "on",
     }
     return params

@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from awgctl import awg, clients
+from awgctl import awg, clients, config
 
 SHOW_OUTPUT = """
 interface: awg0
@@ -65,6 +65,12 @@ def test_obfuscation_is_valid():
             assert hi < next_lo
 
         check_tag_chain(params["I1"])
+        assert params["ContentPaddingAddition"] == params["RandomTrailers"] == ""
+
+
+def test_default_mtu_fits_in_1500():
+    mtu = config.DEFAULTS["awg"]["mtu"]
+    assert mtu + awg.TRANSPORT_OVERHEAD + awg.JUNK_SIZE_MAX["S4"] <= 1500
 
 
 def check_tag_chain(chain):

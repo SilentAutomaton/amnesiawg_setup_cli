@@ -89,6 +89,10 @@ These values are the same on every Amnezia server, which makes them a fingerprin
   it cannot read gets the whole UDP flow blocked, so the handshake passes and data stops. Random
   bytes get cut on some mobile networks; a packet shaped like a real protocol passes.
 
+- `ContentPaddingAddition` and `RandomTrailers` are left out. Both pad transport packets, and
+  `RandomTrailers` loses packets through issue #186. The server config gets `MTU` from the config
+  file, because the 1420 that `awg-quick` picks does not fit a full packet plus `S4` into 1500 bytes.
+
 `awgctl rotate` writes a new set into the server config and restarts the container. Client configs
 carry the same parameters, so every client must be issued again afterwards.
 

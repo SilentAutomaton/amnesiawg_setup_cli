@@ -34,6 +34,8 @@ def deploy(ssh: Ssh, server: Server, force: bool = False) -> None:
         settings.listen_port,
         awg.generate_obfuscation(header_protection_key),
     )
+    # Without it awg-quick picks 1420, and full packets from the server no longer fit in 1500 bytes.
+    conf.interface["MTU"] = str(settings.mtu)
     remote.write_conf(ssh, server, conf)
     ssh.put(remote.entrypoint_script(), server.entrypoint_path, mode="700")
 
@@ -65,6 +67,7 @@ def rotate(ssh: Ssh, server: Server) -> None:
     conf = remote.read_conf(ssh, server)
     _private_key, _public_key, header_protection_key = remote.generate_keys(ssh, server.awg.image)
     conf.interface.update(awg.generate_obfuscation(header_protection_key))
+    conf.interface["MTU"] = str(server.awg.mtu)
     remote.write_conf(ssh, server, conf)
     # Obfuscation is a device setting, so the interface has to come up again.
     remote.restart_container(ssh, server.awg.container_name)
