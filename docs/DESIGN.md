@@ -63,16 +63,31 @@ Peer names are kept in a separate `clientsTable` JSON file inside the container
 
 ### Obfuscation parameters
 
-`core/installers/awgInstaller.cpp` randomises per install:
+`core/installers/awgInstaller.cpp` (protocol 3.1) writes:
 
 - `Jc` in 4..6, `Jmin` 10, `Jmax` 50.
-- `S1` in 12..150, `S2` in 12..150, `S3` in 12..64, `S4` = 12.
-- Constraint: `S1 + MessageInitiationSize`, `S2 + MessageResponseSize` and
-  `S3 + MessageCookieReplySize` must all differ, and `S1`, `S2`, `S3`, `S4` must be distinct.
-  Otherwise two different AmneziaWG packet types would end up the same size on the wire, which is
-  exactly the fingerprint the junk sizes exist to hide.
-- `H1..H4` = 1, 2, 3, 4 by default.
+- `S1`..`S4` = 12. With `HeaderProtectionKey` set, amneziawg-go requires every `S` to be at least
+  12, the header cipher nonce size.
+- `H1..H4` = 1, 2, 3, 4.
 - `HeaderProtectionKey` is a fresh X25519 private key.
+- `I1` is a fixed DNS-like signature packet, sent before every handshake. `I2`..`I5` are empty.
+
+These values are the same on every Amnezia server, which makes them a fingerprint. awgctl keeps the
+3.1 parameters and randomises the rest per server, within what amneziawg-go accepts:
+
+- `Jmin` in 10..30, `Jmax` = `Jmin` + 20..80.
+- `S1` in 12..150, `S2` in 12..150, `S3` in 12..64, `S4` in 12..32. `S1 + MessageInitiationSize`,
+  `S2 + MessageResponseSize`, `S3 + MessageCookieReplySize` and `S4 + MessageTransportHeaderSize`
+  must all differ, and the four `S` values must be distinct. Otherwise two packet types end up the
+  same size on the wire.
+- `H1..H4` are four ranges `lo-hi` in 5..2^31-1. amneziawg-go rejects overlapping ranges, so eight
+  sorted distinct bounds are paired up.
+- `I1` imitates one of: a DNS query for a popular domain, a QUIC v1 Initial packet (1200 bytes), or
+  a SIP REGISTER. The fixed parts are `<b 0x..>` tags, the variable parts are `<r>`, `<rc>`, `<rd>`
+  tags, so every handshake sends a different packet.
+
+`awgctl rotate` writes a new set into the server config and restarts the container. Client configs
+carry the same parameters, so every client must be issued again afterwards.
 
 ### Base image
 
@@ -159,8 +174,9 @@ config, the client config and every rewrite, so there is no template that can dr
 Each peer gets its own preshared key. Amnezia shares one key across every client; per-peer keys cost
 nothing here because the key is generated together with the peer's keypair in the same round trip.
 
-`I1`..`I5` (the AmneziaWG "special junk" packets) are not written. They are optional, and the
-upstream client only stores them as comments in the server config anyway.
+`I1`..`I5` are written as normal keys in the server config. Upstream keeps them as comments there,
+but the image's `awg` accepts them, so the parser needs no special case. Only the side that starts a
+handshake sends them.
 
 ### Module map
 
@@ -170,7 +186,7 @@ upstream client only stores them as comments in the server config anyway.
 | `awgctl/config.py` | defaults plus TOML overrides, resolved into a `Server` dataclass |
 | `awgctl/ssh.py` | `Ssh`: `run`, `sudo`, `put`, `get` |
 | `awgctl/remote.py` | Docker and host operations expressed through `Ssh` |
-| `awgctl/deploy.py` | `deploy`, `status`, `destroy` |
+| `awgctl/deploy.py` | `deploy`, `status`, `rotate`, `destroy` |
 | `awgctl/clients.py` | `add-client`, `list-clients`, `remove-client` |
 | `awgctl/qr.py` | terminal QR, optional `segno` dependency |
 | `awgctl/cli.py` | argparse and dispatch, no logic |
@@ -186,5 +202,5 @@ plugin registry, no interface with a single implementation.
 ### Testing
 
 `tests/test_awg.py` is plain `assert` statements, no framework. It covers the obfuscation constraint
-solver, IP allocation including the `.254` and exhaustion edges, config parse/render round-trip, and
+solver, the `I1` tag syntax, IP allocation including the `.254` and exhaustion edges, config parse/render round-trip, and
 peer add/remove.

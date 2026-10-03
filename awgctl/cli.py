@@ -29,6 +29,9 @@ def build_parser() -> argparse.ArgumentParser:
     destroy_command.add_argument("--purge", action="store_true", help="also delete the remote directory")
     destroy_command.add_argument("--yes", action="store_true", help="do not ask for confirmation")
 
+    rotate_command = commands.add_parser("rotate", help="generate new obfuscation parameters on a deployed server")
+    rotate_command.add_argument("--yes", action="store_true", help="do not ask for confirmation")
+
     add_command = commands.add_parser("add-client", help="create a client and write its config")
     add_command.add_argument("name")
     add_command.add_argument("--out", type=Path, default=DEFAULT_OUT_DIR, help="output directory for client configs")
@@ -65,6 +68,9 @@ def _dispatch(args: argparse.Namespace, ssh: Ssh, server: config.Server) -> None
     elif args.command == "destroy":
         if args.yes or _confirm(f"remove container {server.awg.container_name} on {server.host}?"):
             deploy.destroy(ssh, server, purge=args.purge)
+    elif args.command == "rotate":
+        if args.yes or _confirm(f"replace obfuscation on {server.host}? every client config must be issued again"):
+            deploy.rotate(ssh, server)
     elif args.command == "add-client":
         clients.add_client(ssh, server, args.name, args.out, show_qr=not args.no_qr)
     elif args.command == "list-clients":

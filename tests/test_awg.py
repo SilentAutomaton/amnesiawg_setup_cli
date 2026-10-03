@@ -1,4 +1,5 @@
 import random
+import re
 import sys
 from pathlib import Path
 
@@ -47,14 +48,40 @@ def test_obfuscation_is_valid():
     for _ in range(2000):
         params = awg.generate_obfuscation("HPKEY", rng)
         sizes = {key: int(params[key]) for key in ("S1", "S2", "S3", "S4")}
-        assert sizes["S4"] == awg.TRANSPORT_JUNK_SIZE
         for key, limit in awg.JUNK_SIZE_MAX.items():
             assert awg.JUNK_SIZE_MIN <= sizes[key] <= limit
         assert len(set(sizes.values())) == 4
         totals = {awg.PACKET_BASE_SIZE[key] + size for key, size in sizes.items()}
         assert len(totals) == 4
         assert 4 <= int(params["Jc"]) <= 6
+        assert 0 < int(params["Jmin"]) < int(params["Jmax"])
         assert params["HeaderProtectionKey"] == "HPKEY"
+
+        ranges = sorted(tuple(map(int, params[f"H{i}"].split("-"))) for i in range(1, 5))
+        assert ranges[0][0] >= awg.MAGIC_HEADER_MIN and ranges[-1][1] <= awg.MAGIC_HEADER_MAX
+        for (lo, hi), (next_lo, _) in zip(ranges, ranges[1:]):
+            assert lo < hi < next_lo
+
+        check_tag_chain(params["I1"])
+
+
+def check_tag_chain(chain):
+    """The same rules amneziawg-go applies when it parses I1..I5."""
+    tags = re.findall(r"<([^<>]*)>", chain)
+    assert tags and "".join(f"<{tag}>" for tag in tags) == chain
+    for tag in tags:
+        name, value = tag.split(" ")
+        if name == "b":
+            assert value.startswith("0x") and len(value) % 2 == 0
+            bytes.fromhex(value[2:])
+        else:
+            assert name in ("r", "rc", "rd") and int(value) > 0
+
+
+def test_every_signature_packet_is_valid():
+    rng = random.Random(2)
+    for build in awg.SIGNATURE_PACKETS:
+        check_tag_chain(build(rng))
 
 
 def test_parse_and_render_round_trip():
@@ -127,7 +154,8 @@ def test_client_conf_copies_shared_params():
     assert client.interface["Address"] == "10.8.1.2/32"
     assert client.interface["DNS"] == "1.1.1.1, 1.0.0.1"
     for key in awg.SHARED_PARAM_KEYS:
-        assert client.interface[key] == server.interface[key]
+        assert client.interface.get(key) == server.interface[key] or server.interface[key] == ""
+    assert client.interface["I1"]
     assert client.peers[0].fields["Endpoint"] == "vpn.example.org:51820"
 
 

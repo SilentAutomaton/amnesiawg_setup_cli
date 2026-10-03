@@ -33,6 +33,7 @@ awgctl status                    # container state and awg show
 awgctl add-client laptop         # writes clients/<server>/laptop.conf and prints a QR
 awgctl list-clients              # names, addresses, last handshake, transfer
 awgctl remove-client laptop      # revoke without restarting the container
+awgctl rotate                    # new obfuscation parameters; issue every client again
 awgctl destroy --purge           # remove the container and the remote directory
 ```
 

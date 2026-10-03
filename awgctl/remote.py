@@ -117,6 +117,10 @@ def remove_container(ssh: Ssh, name: str) -> None:
     ssh.sudo(f"docker rm -f {shlex.quote(name)}", check=False)
 
 
+def restart_container(ssh: Ssh, name: str) -> None:
+    ssh.sudo(f"docker restart {shlex.quote(name)}")
+
+
 def apply_config(ssh: Ssh, server: Server) -> None:
     """Load the config into the running interface without dropping live sessions."""
     stripped = "/tmp/awg0.strip"
