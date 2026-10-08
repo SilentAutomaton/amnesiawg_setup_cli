@@ -1,3 +1,5 @@
+[Русская версия](README.ru.md)
+
 # awgctl
 
 Deploy an [AmneziaWG](https://github.com/amnezia-vpn/amneziawg-go) server into a Docker container on
@@ -57,3 +59,7 @@ other clients keep their sessions.
 ```sh
 python tests/test_awg.py
 ```
+
+## License
+
+MIT
